@@ -1,0 +1,11 @@
+
+  # Add language options
+
+  This is a code bundle for Add language options. The original project is available at https://www.figma.com/design/8LJN7ipJJbE6QuUkE7NViK/Add-language-options.
+
+  ## Running the code
+
+  Run `npm i` to install the dependencies.
+
+  Run `npm run dev` to start the development server.
+  
