@@ -11,6 +11,7 @@ import { addCollection, getCollections } from "../lib/userService";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { getPayments } from "../lib/userService";
 import * as XLSX from "xlsx";
+import { resetPassword } from "../lib/userService";
 import { addPayment } from "../lib/userService";
 import {
   LineChart,
@@ -1147,11 +1148,12 @@ function WorkersPage({ t, workers, setWorkers, showToast , loadWorkers}: {
   const [newName, setNewName] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newArea, setNewArea] = useState("");
+  const [newPassword, setNewPassword] = useState("");
 
   const filtered = workers.filter(w => w.name.toLowerCase().includes(search.toLowerCase()) || w.id.includes(search));
 
  const handleAdd = async () => {
-  if (!newName || !newPhone || !newArea) {
+  if (!newName || !newPhone || !newArea || !newPassword) {
     showToast("Fill all fields", "error");
     return;
   }
@@ -1159,7 +1161,8 @@ function WorkersPage({ t, workers, setWorkers, showToast , loadWorkers}: {
   const { data, error } = await createWorker(
     newName,
     newArea,
-    newPhone
+    newPhone,
+    newPassword
   );
 
   if (error) {
@@ -1174,7 +1177,7 @@ function WorkersPage({ t, workers, setWorkers, showToast , loadWorkers}: {
   setNewName("");
   setNewPhone("");
   setNewArea("");
-
+  setNewPassword("");
   setShowAdd(false);
 };
 
@@ -1209,28 +1212,108 @@ function WorkersPage({ t, workers, setWorkers, showToast , loadWorkers}: {
       </div>
 
       {showAdd && (
-        <Modal title={t("addWorkerTitle")} onClose={() => setShowAdd(false)}>
-          <div className="space-y-3">
-            <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("workerName")}</label>
-              <input className="w-full mt-1 px-3 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={newName} onChange={e => setNewName(e.target.value)} placeholder="Full Name" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("workerPhone")}</label>
-              <input className="w-full mt-1 px-3 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={newPhone} onChange={e => setNewPhone(e.target.value)} placeholder="9876543210" />
-            </div>
-            <div>
-              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{t("workerArea")}</label>
-              <input className="w-full mt-1 px-3 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white" value={newArea} onChange={e => setNewArea(e.target.value)} placeholder="Zone A" />
-            </div>
-            <p className="text-xs text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-lg">{t("generatedUsername")} {"&"} {t("generatedPassword")} {"will be shown after adding."}</p>
-            <div className="flex gap-2 pt-2">
-              <button onClick={handleAdd} className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-green-600 to-sky-500 text-white text-sm font-medium">{t("addWorker")}</button>
-              <button onClick={() => setShowAdd(false)} className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm">{t("cancel")}</button>
-            </div>
-          </div>
-        </Modal>
-      )}
+  <Modal
+    title={t("addWorkerTitle")}
+    onClose={() => setShowAdd(false)}
+  >
+    <div className="space-y-3">
+
+      <div>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Worker Name
+        </label>
+
+        <input
+          className="w-full mt-1 px-3 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          placeholder="Full Name"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Phone Number
+        </label>
+
+        <input
+          type="tel"
+          maxLength={10}
+          className="w-full mt-1 px-3 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          value={newPhone}
+          onChange={(e) =>
+            setNewPhone(
+              e.target.value.replace(/\D/g, "")
+            )
+          }
+          placeholder="9876543210"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Area / Village
+        </label>
+
+        <input
+          className="w-full mt-1 px-3 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          value={newArea}
+          onChange={(e) => setNewArea(e.target.value)}
+          placeholder="Village Name"
+        />
+      </div>
+
+      <div>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Password
+        </label>
+
+        <input
+          type="password"
+          className="w-full mt-1 px-3 py-2 rounded-lg border dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+          value={newPassword}
+          onChange={(e) =>
+            setNewPassword(e.target.value)
+          }
+          placeholder="Enter Password"
+        />
+      </div>
+
+      <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+        <p className="text-xs text-green-700 dark:text-green-400">
+          Worker credentials will be:
+        </p>
+
+        <p className="text-xs mt-1">
+          Username: <b>{newPhone || "Phone Number"}</b>
+        </p>
+
+        <p className="text-xs">
+          Password: <b>{newPassword || "Password"}</b>
+        </p>
+      </div>
+
+      <div className="flex gap-2 pt-2">
+
+        <button
+          onClick={handleAdd}
+          className="flex-1 py-2.5 rounded-lg bg-gradient-to-r from-green-600 to-sky-500 text-white text-sm font-medium"
+        >
+          Add Worker
+        </button>
+
+        <button
+          onClick={() => setShowAdd(false)}
+          className="flex-1 py-2.5 rounded-lg bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 text-sm"
+        >
+          Cancel
+        </button>
+
+      </div>
+
+    </div>
+  </Modal>
+)}
 
       {showCreds && (
         <Modal title={t("credentials")} onClose={() => setShowCreds(null)}>
@@ -2828,7 +2911,7 @@ const handleSubmit = async () => {
                 }
               >
                 <option value="houseOwner">{t("houseOwnerRole")}</option>
-                <option value="Worker">{t("Worker")}</option>
+                
               </select>
 
               <input
@@ -3029,6 +3112,11 @@ const handleSubmit = async () => {
 // ─── Main App ─────────────────────────────────────────────────────────────────
 export default function App() {
   const [allUsers, setAllUsers] = useState<any[]>([]);
+  const [showForgot, setShowForgot] = useState(false);
+
+const [resetPhone, setResetPhone] = useState("");
+const [newPassword, setNewPassword] = useState("");
+const [confirmPassword, setConfirmPassword] = useState("");
   const [scannedHouse, setScannedHouse] = useState<any>(null);
   const [capturedWeight, setCapturedWeight] = useState("0.0");
   const [dbWorkers, setDbWorkers] = useState<any[]>([]);
@@ -3334,11 +3422,49 @@ console.log("QR CODE:", userData.qr_code);
 
   // ── Login ──
   if (page === "login" || !role) {
+    const handlePasswordReset = async () => {
+
+  if (!resetPhone) {
+    alert("Enter phone number");
+    return;
+  }
+
+  if (!newPassword) {
+    alert("Enter new password");
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    alert("Passwords do not match");
+    return;
+  }
+
+  const { error } = await supabase
+    .from("app_user")
+    .update({
+      password: newPassword,
+    })
+    .eq("phone_no", resetPhone);
+
+  if (error) {
+    alert(error.message);
+    return;
+  }
+
+  alert("Password updated successfully");
+
+  setShowForgot(false);
+
+  setResetPhone("");
+  setNewPassword("");
+  setConfirmPassword("");
+};
     const roles = [
       { id: "admin", icon: Shield, label: t("admin"), color: "eco" },
       { id: "worker", icon: HardHat, label: t("workerRole"), color: "sky" },
       { id: "houseOwner", icon: Home, label: t("houseOwnerRole"), color: "amber" },
     ];
+
     const borderColors: Record<string, string> = { eco: "border-green-500 bg-green-50", sky: "border-sky-500 bg-sky-50", amber: "border-amber-500 bg-amber-50" };
     return (
       <div className="min-h-screen bg-gradient-to-br from-green-50 via-white to-sky-50 flex items-center justify-center p-4">
@@ -3377,7 +3503,12 @@ console.log("QR CODE:", userData.qr_code);
               </div>
             </form>
             <div className="flex justify-between mt-4 text-xs">
-              <button className="text-green-600 hover:underline">{t("forgotPassword")}</button>
+              <button
+  onClick={() => setShowForgot(true)}
+  className="text-green-600 hover:underline"
+>
+  {t("forgotPassword")}
+</button>
               <button onClick={() => setPage("register")} className="text-sky-600 hover:underline">{t("createAccount")}</button>
             </div>
             <div className="mt-3 flex justify-end">
@@ -3388,6 +3519,66 @@ console.log("QR CODE:", userData.qr_code);
             </div>
           </div>
         </div>
+        {showForgot && (
+  <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+
+    <div className="bg-white p-6 rounded-xl w-96">
+
+      <h2 className="text-xl font-bold mb-4">
+        Reset Password
+      </h2>
+
+      <input
+        className="w-full border p-2 mb-3 rounded"
+        placeholder="Phone Number"
+        value={resetPhone}
+        onChange={(e) =>
+          setResetPhone(e.target.value)
+        }
+      />
+
+      <input
+        type="password"
+        className="w-full border p-2 mb-3 rounded"
+        placeholder="New Password"
+        value={newPassword}
+        onChange={(e) =>
+          setNewPassword(e.target.value)
+        }
+      />
+
+      <input
+        type="password"
+        className="w-full border p-2 mb-4 rounded"
+        placeholder="Confirm Password"
+        value={confirmPassword}
+        onChange={(e) =>
+          setConfirmPassword(e.target.value)
+        }
+      />
+
+      <div className="flex justify-end gap-2">
+
+        <button
+          onClick={() => setShowForgot(false)}
+          className="px-4 py-2 bg-gray-200 rounded"
+        >
+          Cancel
+        </button>
+
+        <button
+          onClick={handlePasswordReset}
+          className="px-4 py-2 bg-green-600 text-white rounded"
+        >
+          Update Password
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+)}
         <div className="fixed top-4 right-4 z-[999] space-y-2">
           {toasts.map(toast => (
             <div key={toast.id} className={`px-4 py-3 rounded-lg shadow-lg text-white text-sm font-medium ${toast.type === "success" ? "bg-green-600" : toast.type === "error" ? "bg-red-500" : "bg-sky-500"}`}>{toast.msg}</div>

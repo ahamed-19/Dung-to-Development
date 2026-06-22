@@ -144,21 +144,22 @@ export async function deleteUser(id: number) {
 export async function createWorker(
   name: string,
   address: string,
-  phone_no: string
+  phone_no: string,
+  password: string
 ) {
-  console.log("CREATE HOUSE OWNER CALLED");
   const { data, error } = await supabase
     .from("app_user")
     .insert([
       {
         name,
+        age: 0,
         address,
         phone_no,
         role: "worker",
-        age: 0,
-        password: "123456"
-      }
-    ]);
+        password,
+      },
+    ])
+    .select();
 
   return { data, error };
 }
@@ -215,4 +216,15 @@ export async function addPayment(
         payment_date: new Date(),
       },
     ]);
+}
+export async function resetPassword(
+  phone_no: string,
+  newPassword: string
+) {
+  return await supabase
+    .from("app_user")
+    .update({
+      password: newPassword
+    })
+    .eq("phone_no", phone_no);
 }
