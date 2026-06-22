@@ -9,6 +9,9 @@ import { createWorker } from "../lib/userService";
 import { deleteWorker } from "../lib/userService";
 import { addCollection, getCollections } from "../lib/userService";
 import { Html5QrcodeScanner } from "html5-qrcode";
+import { getPayments } from "../lib/userService";
+import { addPayment } from "../lib/userService";
+
 
 
 import { 
@@ -1372,63 +1375,170 @@ function QrManagePage({
 }
 
 // ─── Payments Page ────────────────────────────────────────────────────────────
-function PaymentsPage({ t, payments, setPayments, showToast }: {
+function PaymentsPage({
+  t,
+  payments,
+  setPayments,
+  showToast,
+}: {
   t: (k: string) => string;
-  payments: Payment[]; setPayments: (p: Payment[] | ((prev: Payment[]) => Payment[])) => void;
+  payments: any[];
+  setPayments: React.Dispatch<React.SetStateAction<any[]>>;
   showToast: (m: string) => void;
 }) {
   const [filter, setFilter] = useState("all");
-  const filtered = filter === "all" ? payments : payments.filter(p => p.s.toLowerCase() === filter);
-  const toggle = (idx: number) => {
-    setPayments((prev: Payment[]) => prev.map((p, i) => i === idx ? { ...p, s: p.s === "Completed" ? "Pending" : "Completed" } : p));
-    showToast(t("paymentUpdated"));
+
+  const filtered =
+    filter === "all"
+      ? payments
+      : payments.filter(
+          (p) => p.status.toLowerCase() === filter
+        );
+
+  const toggle = (id: number) => {
+    setPayments((prev) =>
+      prev.map((p) =>
+        p.id === id
+          ? {
+              ...p,
+              status:
+                p.status === "Completed"
+                  ? "Pending"
+                  : "Completed",
+            }
+          : p
+      )
+    );
+
+    showToast("Payment Updated");
   };
+
+  const totalPaid = payments
+    .filter((p) => p.status === "Completed")
+    .reduce(
+      (sum, p) => sum + Number(p.amount),
+      0
+    );
+    const pendingCount = payments.filter(
+  p => p.status === "Pending"
+).length;
+
+const completedCount = payments.filter(
+  p => p.status === "Completed"
+).length;
+
   return (
     <div>
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mb-4">
-        <StatCard icon={IndianRupee} label={t("totalPaid")} value="₹2,26,500" color="eco" />
-        <StatCard icon={ClipboardList} label={t("pending")} value={`${payments.filter(p => p.s === "Pending").length}`} color="amber" />
-        <StatCard icon={CheckCircle} label={t("completed")} value={`${payments.filter(p => p.s === "Completed").length}`} color="sky" />
+
+        <StatCard
+          icon={IndianRupee}
+          label={t("totalPaid")}
+          value={`₹${totalPaid}`}
+          color="eco"
+        />
+
+        <StatCard
+          icon={ClipboardList}
+          label={t("pending")}
+          value={`${
+            payments.filter(
+              (p) => p.status === "Pending"
+            ).length
+          }`}
+          color="amber"
+        />
+
+        <StatCard
+          icon={CheckCircle}
+          label={t("completed")}
+          value={`${
+            payments.filter(
+              (p) => p.status === "Completed"
+            ).length
+          }`}
+          color="sky"
+        />
+
       </div>
+
       <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 rounded-xl p-4">
+
         <div className="flex gap-2 mb-4 flex-wrap">
-          {["all", "pending", "completed"].map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize ${filter === f ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"}`}>
-              {t(f) || f}
-            </button>
-          ))}
+          {["all", "pending", "completed"].map(
+            (f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize ${
+                  filter === f
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-600"
+                }`}
+              >
+                {f}
+              </button>
+            )
+          )}
         </div>
+
         <div className="space-y-2">
-          {filtered.map((p, i) => {
-            const realIdx = payments.indexOf(p);
-            return (
-              <div key={i} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg">
-                <div>
-                  <p className="font-medium text-sm dark:text-gray-200">{p.n}</p>
-                  <p className="text-xs text-gray-400">{p.h}</p>
-                </div>
-                <div className="flex items-center gap-3">
-                  <div className="text-right">
-                    <p className="font-semibold text-sm dark:text-gray-200">{p.a}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded ${p.s === "Completed" ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400" : "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400"}`}>
-                      {p.s === "Completed" ? t("completed") : t("pending")}
-                    </span>
-                  </div>
-                  <button onClick={() => toggle(realIdx)}
-                    className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${p.s === "Completed" ? "bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-400" : "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400"}`}>
-                    {p.s === "Completed" ? t("markAsPending") : t("markAsPaid")}
-                  </button>
-                </div>
+
+          {filtered.map((p) => (
+            <div
+              key={p.id}
+              className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/30 rounded-lg"
+            >
+              <div>
+                <p className="font-medium text-sm">
+                  {p.owner_name}
+                </p>
+
+                <p className="text-xs text-gray-400">
+                  House {p.house_id}
+                </p>
               </div>
-            );
-          })}
+
+              <div className="flex items-center gap-3">
+
+                <div className="text-right">
+                  <p className="font-semibold text-sm">
+                    ₹{p.amount}
+                  </p>
+
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded ${
+                      p.status === "Completed"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-amber-100 text-amber-700"
+                    }`}
+                  >
+                    {p.status}
+                  </span>
+                </div>
+
+                <button
+                  onClick={() => toggle(p.id)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-medium ${
+                    p.status === "Completed"
+                      ? "bg-amber-100 text-amber-700"
+                      : "bg-green-100 text-green-700"
+                  }`}
+                >
+                  {p.status === "Completed"
+                    ? "Mark as Pending"
+                    : "Mark as Paid"}
+                </button>
+
+              </div>
+            </div>
+          ))}
+
         </div>
       </div>
     </div>
   );
 }
-
 // ─── Analytics ────────────────────────────────────────────────────────────────
 function AnalyticsPage({ t }: { t: (k: string) => string }) {
   const daily = [40, 55, 30, 70, 85, 60, 90, 45, 75, 95, 50, 80];
@@ -1902,9 +2012,21 @@ function CollectionEntryPage({
       showToast("Failed to save collection");
       return;
     }
+ await supabase
+    .from("payments")
+    .insert([
+      {
+        house_id: scannedHouse.id,
+        owner_name: scannedHouse.name,
+        amount: Number(amount),
+              payment_date: new Date(),
 
-    showToast("Collection saved successfully!");
-  };
+        status: "Pending",
+      },
+    ]);
+
+  showToast("Collection saved successfully!");
+};
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -2732,6 +2854,20 @@ const loadCollections = async () => {
 useEffect(() => {
   loadCollections();
 }, []);
+
+const loadPayments = async () => {
+  const { data, error } = await getPayments();
+
+  if (error) {
+    console.log(error);
+    return;
+  }
+
+  setPayments(data || []);
+};
+useEffect(() => {
+  loadPayments();
+}, []);
   // Keep the rest of your App code unchanged below this
 
 
@@ -2985,7 +3121,8 @@ case "dashboard":
       case "collections": return <CollectionsPage t={t} collections={collections}
       houses={houses}
       workers={workers} />;
-      case "payments": return <PaymentsPage t={t} payments={payments} setPayments={setPayments} showToast={showToast} />;
+      case "payments": return <PaymentsPage t={t} payments={payments}
+  setPayments={setPayments} showToast={showToast} />;
       case "analytics": return <AnalyticsPage t={t} />;
       case "reports": return <ReportsPage t={t} role={role} showToast={showToast} />;
       case "inventory": return <InventoryPage t={t} />;

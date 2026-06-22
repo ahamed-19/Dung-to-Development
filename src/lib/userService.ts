@@ -193,3 +193,26 @@ export async function getCollections() {
     .select("*")
     .order("created_at", { ascending: false });
 }
+export async function getPayments() {
+  return await supabase
+    .from("payments")
+    .select("*")
+    .order("payment_date", { ascending: false });
+}
+export async function addPayment(
+  house_id: number,
+  owner_name: string,
+  amount: number
+) {
+  return await supabase
+    .from("payments")
+    .insert([
+      {
+        house_id,
+        owner_name,
+        amount,
+        status: "Pending",
+        payment_date: new Date(),
+      },
+    ]);
+}
