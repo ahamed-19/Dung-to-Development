@@ -2232,9 +2232,88 @@ function RegisterPage({ t, onLogin }: { t: (k: string) => string; onLogin: () =>
     : [t("personalInfo"), t("addressInfo"), t("houseDetails"), t("identityVerification"), t("reviewSubmit")];
 
 const handleSubmit = async () => {
-  
 
-  console.log("FORM DATA:", formData);
+  if (!formData.fullName.trim()) {
+    alert("Full Name is required");
+    return;
+  }
+
+  if (!/^[A-Za-z ]+$/.test(formData.fullName)) {
+    alert("Name should contain only letters");
+    return;
+  }
+
+  if (!/^[0-9]{10}$/.test(formData.phone)) {
+    alert("Phone number must be exactly 10 digits");
+    return;
+  }
+
+  if (
+    formData.email &&
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)
+  ) {
+    alert("Invalid email address");
+    return;
+  }
+
+  if (formData.password.length < 6) {
+    alert("Password must be at least 6 characters");
+    return;
+  }
+
+  if (!formData.village.trim()) {
+    alert("Village is required");
+    return;
+  }
+
+  if (!formData.panchayat.trim()) {
+    alert("Panchayat is required");
+    return;
+  }
+
+  if (!formData.district.trim()) {
+    alert("District is required");
+    return;
+  }
+
+  if (!/^[0-9]{6}$/.test(formData.pinCode)) {
+    alert("PIN Code must be 6 digits");
+    return;
+  }
+
+  if (!isWorker) {
+
+    if (!formData.houseNumber.trim()) {
+      alert("House Number is required");
+      return;
+    }
+
+    if (
+      formData.cows &&
+      isNaN(Number(formData.cows))
+    ) {
+      alert("Number of cows must be numeric");
+      return;
+    }
+
+    if (
+      formData.dung &&
+      isNaN(Number(formData.dung))
+    ) {
+      alert("Dung quantity must be numeric");
+      return;
+    }
+  }
+
+  if (!formData.idType.trim()) {
+    alert("ID Type is required");
+    return;
+  }
+
+  if (!formData.idNumber.trim()) {
+    alert("ID Number is required");
+    return;
+  }
 
   const { data, error } = await createUser(
     formData.fullName,
@@ -2244,9 +2323,6 @@ const handleSubmit = async () => {
     formData.role,
     formData.password
   );
-
-  console.log("DATA:", data);
-  console.log("ERROR:", error);
 
   if (error) {
     alert(error.message);
@@ -2295,13 +2371,17 @@ const handleSubmit = async () => {
               />
 
               <input
-                className="w-full px-3 py-2 rounded-lg border"
-                placeholder={t("phoneNumber")}
-                value={formData.phone}
-                onChange={(e) =>
-                  setFormData({ ...formData, phone: e.target.value })
-                }
-              />
+  className="w-full px-3 py-2 rounded-lg border"
+  placeholder={t("phoneNumber")}
+  value={formData.phone}
+  maxLength={10}
+  onChange={(e) =>
+    setFormData({
+      ...formData,
+      phone: e.target.value.replace(/\D/g, "")
+    })
+  }
+/>
 
               <input
                 className="w-full px-3 py-2 rounded-lg border"
@@ -2313,14 +2393,18 @@ const handleSubmit = async () => {
               />
 
               <input
-                type="password"
-                className="w-full px-3 py-2 rounded-lg border"
-                placeholder="Password"
-                value={formData.password}
-                onChange={(e) =>
-                  setFormData({ ...formData, password: e.target.value })
-                }
-              />
+  type="password"
+  minLength={6}
+  className="w-full px-3 py-2 rounded-lg border"
+  placeholder="Password"
+  value={formData.password}
+  onChange={(e) =>
+    setFormData({
+      ...formData,
+      password: e.target.value
+    })
+  }
+/>
             </div>
           )}
 
