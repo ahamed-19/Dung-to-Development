@@ -10,7 +10,19 @@ import { deleteWorker } from "../lib/userService";
 import { addCollection, getCollections } from "../lib/userService";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { getPayments } from "../lib/userService";
+import * as XLSX from "xlsx";
 import { addPayment } from "../lib/userService";
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer
+} from "recharts";
 
 
 
@@ -1540,111 +1552,447 @@ const completedCount = payments.filter(
   );
 }
 // ─── Analytics ────────────────────────────────────────────────────────────────
-function AnalyticsPage({ t }: { t: (k: string) => string }) {
-  const daily = [40, 55, 30, 70, 85, 60, 90, 45, 75, 95, 50, 80];
-  const revenue = [30, 45, 50, 65, 55, 70, 80, 75, 90, 85, 95, 100];
-  const months = ["J", "F", "M", "A", "M", "J", "J", "A", "S", "O", "N", "D"];
+function AnalyticsPage({
+  t,
+  collections,
+  payments,
+}: {
+  t: (k: string) => string;
+  collections: any[];
+  payments: any[];
+}) {
+
+  const totalWeight = collections.reduce(
+    (sum, c) => sum + Number(c.weight || 0),
+    0
+  );
+
+  const totalRevenue = payments
+    .filter((p) => p.status === "Completed")
+    .reduce(
+      (sum, p) => sum + Number(p.amount || 0),
+      0
+    );
+
+  const totalCollections = collections.length;
+
+  const totalPending = payments.filter(
+    (p) => p.status === "Pending"
+  ).length;
+
+  const totalCompleted = payments.filter(
+    (p) => p.status === "Completed"
+  ).length;
+
+  const dailyData = collections.map((item) => ({
+    date: new Date(
+      item.collection_date || Date.now()
+    ).toLocaleDateString(),
+    weight: Number(item.weight || 0),
+  }));
+
+  const revenueData = payments
+    .filter((p) => p.status === "Completed")
+    .map((p) => ({
+      date: new Date(
+        p.payment_date || Date.now()
+      ).toLocaleDateString(),
+      amount: Number(p.amount || 0),
+    }));
+
   return (
     <div className="grid md:grid-cols-2 gap-4">
-      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 rounded-xl p-4">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t("dailyCollection")}</h3>
-        <div className="flex items-end gap-1 h-40">
-          {daily.map((v, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center">
-              <div className="w-full rounded-t" style={{ height: `${v}%`, background: "linear-gradient(to top,#16a34a,#0ea5e9)" }} />
-              <span className="text-[9px] text-gray-400 mt-1">{i + 6}</span>
-            </div>
-          ))}
+
+      <div className="bg-white rounded-xl p-4 shadow">
+        <h3 className="font-semibold mb-3">
+          Total Collection
+        </h3>
+
+        <div className="text-4xl font-bold text-green-600">
+          {totalWeight.toFixed(2)} kg
         </div>
+
+        <p className="text-gray-500 mt-2">
+          Total dung collected from all houses
+        </p>
       </div>
-      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 rounded-xl p-4">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t("revenueGrowth")}</h3>
-        <div className="flex items-end gap-2 h-40">
-          {revenue.map((v, i) => (
-            <div key={i} className="flex-1 flex flex-col items-center">
-              <div className="w-full rounded-t" style={{ height: `${v}%`, background: "linear-gradient(to top,#f59e0b,#ea580c)" }} />
-              <span className="text-[9px] text-gray-400 mt-1">{months[i]}</span>
-            </div>
-          ))}
+
+      <div className="bg-white rounded-xl p-4 shadow">
+        <h3 className="font-semibold mb-3">
+          Revenue Generated
+        </h3>
+
+        <div className="text-4xl font-bold text-blue-600">
+          ₹{totalRevenue.toFixed(2)}
         </div>
+
+        <p className="text-gray-500 mt-2">
+          Completed Payments Revenue
+        </p>
       </div>
-      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 rounded-xl p-4">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t("villagePerformance")}</h3>
+
+      <div className="bg-white rounded-xl p-4 shadow">
+        <h3 className="font-semibold mb-3">
+          Collection Records
+        </h3>
+
+        <div className="text-4xl font-bold text-purple-600">
+          {totalCollections}
+        </div>
+
+        <p className="text-gray-500 mt-2">
+          Total collection entries
+        </p>
+      </div>
+
+      <div className="bg-white rounded-xl p-4 shadow">
+        <h3 className="font-semibold mb-3">
+          Payment Status
+        </h3>
+
         <div className="space-y-3">
-          {[{ n: "Sundarpur", v: 85 }, { n: "Greenville", v: 72 }, { n: "Lakshmipur", v: 60 }].map((v, i) => (
-            <div key={i}>
-              <div className="flex justify-between text-sm mb-1"><span className="text-gray-600 dark:text-gray-300">{v.n}</span><span className="font-medium dark:text-gray-200">{v.v}%</span></div>
-              <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full"><div className="h-2 bg-green-500 rounded-full" style={{ width: `${v.v}%` }} /></div>
+
+          <div>
+            <div className="flex justify-between">
+              <span>Completed</span>
+              <span>{totalCompleted}</span>
             </div>
-          ))}
+
+            <div className="w-full bg-gray-200 h-3 rounded">
+              <div
+                className="bg-green-500 h-3 rounded"
+                style={{
+                  width: `${
+                    payments.length
+                      ? (totalCompleted /
+                          payments.length) *
+                        100
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+          </div>
+
+          <div>
+            <div className="flex justify-between">
+              <span>Pending</span>
+              <span>{totalPending}</span>
+            </div>
+
+            <div className="w-full bg-gray-200 h-3 rounded">
+              <div
+                className="bg-amber-500 h-3 rounded"
+                style={{
+                  width: `${
+                    payments.length
+                      ? (totalPending /
+                          payments.length) *
+                        100
+                      : 0
+                  }%`,
+                }}
+              />
+            </div>
+          </div>
+
         </div>
       </div>
-      <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 rounded-xl p-4">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-3">{t("productSales")}</h3>
-        <div className="space-y-2">
-          {[{ n: "Compost", v: 45, c: "bg-green-500" }, { n: "Fertilizer", v: 30, c: "bg-sky-500" }, { n: "Diyas", v: 15, c: "bg-amber-500" }, { n: "Others", v: 10, c: "bg-purple-500" }].map((p, i) => (
-            <div key={i} className="flex items-center gap-2">
-              <span className={`w-3 h-3 rounded-full ${p.c}`} />
-              <span className="text-sm text-gray-600 dark:text-gray-300 flex-1">{p.n}</span>
-              <span className="text-sm font-medium dark:text-gray-200">{p.v}%</span>
-            </div>
-          ))}
-        </div>
+
+      <div className="bg-white rounded-xl p-4 shadow col-span-1">
+        <h3 className="font-semibold mb-4">
+          Daily Collection (kg)
+        </h3>
+
+        <ResponsiveContainer
+          width="100%"
+          height={300}
+        >
+          <BarChart data={dailyData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis />
+            <Tooltip />
+            <Bar
+              dataKey="weight"
+              fill="#22c55e"
+            />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
+
+      <div className="bg-white rounded-xl p-4 shadow col-span-1">
+        <h3 className="font-semibold mb-4">
+          Revenue Growth
+        </h3>
+
+        <ResponsiveContainer
+          width="100%"
+          height={300}
+        >
+          <LineChart data={revenueData}>
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="date" />
+            <YAxis />
+            <Tooltip />
+
+            <Line
+              type="monotone"
+              dataKey="amount"
+              stroke="#2563eb"
+              strokeWidth={3}
+            />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+
     </div>
   );
 }
-
 // ─── Reports ──────────────────────────────────────────────────────────────────
-function ReportsPage({ t, role, showToast }: { t: (k: string) => string; role: string; showToast: (m: string) => void }) {
-  const tabs = role === "admin" ? ["daily", "weekly", "monthly", "yearly"] : ["daily", "weekly", "monthly"];
+function ReportsPage({
+  t,
+  role,
+  collections,
+  payments,
+  showToast,
+}: {
+  t: (k: string) => string;
+  role: string;
+  collections: any[];
+  payments: any[];
+  showToast: (m: string) => void;
+}) {
+  const tabs =
+    role === "admin"
+      ? ["daily", "weekly", "monthly", "yearly"]
+      : ["daily", "weekly", "monthly"];
+
   const [active, setActive] = useState("daily");
-  const rows = REPORT_DATA[active] || [];
+
+  const rows = collections.map((c) => {
+    const payment = payments.find(
+      (p) => p.house_id === c.house_id
+    );
+
+    return {
+      date: c.collection_date
+        ? new Date(c.collection_date).toLocaleDateString()
+        : "-",
+
+      weight: Number(c.weight || 0),
+
+      amount: payment
+        ? Number(payment.amount || 0)
+        : 0,
+
+      status: payment
+        ? payment.status
+        : "Pending",
+    };
+  });
+
+  const totalWeight = rows.reduce(
+    (sum, r) => sum + r.weight,
+    0
+  );
+
+  const totalAmount = rows.reduce(
+    (sum, r) => sum + r.amount,
+    0
+  );
+  const exportCSV = () => {
+  const csvRows = rows.map((r) => ({
+    Date: r.date,
+    Weight: r.weight,
+    Amount: r.amount,
+    Status: r.status,
+  }));
+
+  const csv =
+    "Date,Weight,Amount,Status\n" +
+    csvRows
+      .map(
+        (r) =>
+          `${r.Date},${r.Weight},${r.Amount},${r.Status}`
+      )
+      .join("\n");
+
+  const blob = new Blob([csv], {
+    type: "text/csv",
+  });
+
+  const url = window.URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "D2D_Report.csv";
+  a.click();
+};
+
+const exportExcel = () => {
+  const worksheet = XLSX.utils.json_to_sheet(rows);
+
+  const workbook = XLSX.utils.book_new();
+
+  XLSX.utils.book_append_sheet(
+    workbook,
+    worksheet,
+    "Report"
+  );
+
+  XLSX.writeFile(
+    workbook,
+    "D2D_Report.xlsx"
+  );
+};
+
+const exportPDF = () => {
+  window.print();
+};
+
   return (
     <div>
+      {/* Summary */}
+      <div className="grid md:grid-cols-2 gap-4 mb-4">
+
+        <div className="bg-white rounded-xl p-4 shadow">
+          <h3 className="font-semibold">
+            Total Collection
+          </h3>
+
+          <p className="text-3xl font-bold text-green-600 mt-2">
+            {totalWeight.toFixed(2)} kg
+          </p>
+        </div>
+
+        <div className="bg-white rounded-xl p-4 shadow">
+          <h3 className="font-semibold">
+            Total Revenue
+          </h3>
+
+          <p className="text-3xl font-bold text-blue-600 mt-2">
+            ₹{totalAmount.toFixed(2)}
+          </p>
+        </div>
+
+      </div>
+
+      {/* Report Table */}
       <div className="bg-white/70 dark:bg-gray-800/70 backdrop-blur-md border border-white/30 dark:border-gray-700/30 rounded-xl p-4 mb-4">
+
         <div className="flex flex-wrap gap-2 mb-4">
-          {tabs.map(tab => (
-            <button key={tab} onClick={() => setActive(tab)}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize ${active === tab ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400" : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"}`}>
+          {tabs.map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActive(tab)}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium capitalize ${
+                active === tab
+                  ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400"
+                  : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300"
+              }`}
+            >
               {t(tab)}
             </button>
           ))}
         </div>
+
         <div className="overflow-x-auto">
+
           <table className="w-full text-sm">
-            <thead><tr className="text-left text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
-              <th className="pb-2">{t("date")}</th><th className="pb-2">{t("weight")}</th>
-              <th className="pb-2">{t("amount")}</th><th className="pb-2">{t("status")}</th>
-            </tr></thead>
+
+            <thead>
+              <tr className="text-left text-gray-500 dark:text-gray-400 border-b dark:border-gray-700">
+                <th className="pb-2">
+                  {t("date")}
+                </th>
+
+                <th className="pb-2">
+                  {t("weight")}
+                </th>
+
+                <th className="pb-2">
+                  {t("amount")}
+                </th>
+
+                <th className="pb-2">
+                  {t("status")}
+                </th>
+              </tr>
+            </thead>
+
             <tbody>
-              {rows.map((r, i) => (
-                <tr key={i} className="border-b border-gray-50 dark:border-gray-700/50">
-                  <td className="py-2 dark:text-gray-300">{r.d}</td>
-                  <td className="dark:text-gray-300">{r.w}</td>
-                  <td className="text-green-600 font-medium">{r.a}</td>
-                  <td><span className={`px-2 py-0.5 rounded text-xs ${r.s === "Complete" ? "bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-400" : r.s === "In Progress" ? "bg-sky-100 dark:bg-sky-900/40 text-sky-700 dark:text-sky-400" : "bg-amber-100 text-amber-700"}`}>{r.s === "In Progress" ? t("inProgress") : t("complete")}</span></td>
+
+              {rows.map((row, index) => (
+                <tr
+                  key={index}
+                  className="border-b border-gray-50 dark:border-gray-700/50"
+                >
+                  <td className="py-2 dark:text-gray-300">
+                    {row.date}
+                  </td>
+
+                  <td className="dark:text-gray-300">
+                    {row.weight} kg
+                  </td>
+
+                  <td className="text-green-600 font-medium">
+                    ₹{row.amount}
+                  </td>
+
+                  <td>
+                    <span
+                      className={`px-2 py-0.5 rounded text-xs ${
+                        row.status === "Completed"
+                          ? "bg-green-100 text-green-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}
+                    >
+                      {row.status}
+                    </span>
+                  </td>
                 </tr>
               ))}
+
             </tbody>
+
           </table>
+
         </div>
+
       </div>
+
+      {/* Export Buttons */}
       <div className="flex gap-2">
-        <button onClick={() => showToast("PDF Downloaded")} className="px-4 py-2 rounded-lg bg-red-50 dark:bg-red-900/20 text-red-600 text-sm font-medium flex items-center gap-1">
-          <FileText className="w-4 h-4" />PDF
-        </button>
-        <button onClick={() => showToast("Excel Downloaded")} className="px-4 py-2 rounded-lg bg-green-50 dark:bg-green-900/20 text-green-600 text-sm font-medium flex items-center gap-1">
-          <FileSpreadsheet className="w-4 h-4" />Excel
-        </button>
-        <button onClick={() => showToast("CSV Downloaded")} className="px-4 py-2 rounded-lg bg-sky-50 dark:bg-sky-900/20 text-sky-600 text-sm font-medium flex items-center gap-1">
-          <File className="w-4 h-4" />CSV
-        </button>
+
+        <button
+  onClick={exportPDF}
+  className="px-4 py-2 rounded-lg bg-red-50 text-red-600 text-sm font-medium flex items-center gap-1"
+>
+  <FileText className="w-4 h-4" />
+  PDF
+</button>
+
+        <button
+  onClick={exportExcel}
+  className="px-4 py-2 rounded-lg bg-green-50 text-green-600 text-sm font-medium flex items-center gap-1"
+>
+  <FileSpreadsheet className="w-4 h-4" />
+  Excel
+</button>
+
+        <button
+  onClick={exportCSV}
+  className="px-4 py-2 rounded-lg bg-sky-50 text-sky-600 text-sm font-medium flex items-center gap-1"
+>
+  <File className="w-4 h-4" />
+  CSV
+</button>
+
       </div>
     </div>
   );
 }
-
 // ─── Inventory ────────────────────────────────────────────────────────────────
 function InventoryPage({ t }: { t: (k: string) => string }) {
   const items = [
@@ -3123,8 +3471,10 @@ case "dashboard":
       workers={workers} />;
       case "payments": return <PaymentsPage t={t} payments={payments}
   setPayments={setPayments} showToast={showToast} />;
-      case "analytics": return <AnalyticsPage t={t} />;
-      case "reports": return <ReportsPage t={t} role={role} showToast={showToast} />;
+      case "analytics": return <AnalyticsPage t={t} collections={collections}
+      payments={payments}/>;
+      case "reports": return <ReportsPage t={t} role={role} collections={collections}
+      payments={payments} showToast={showToast} />;
       case "inventory": return <InventoryPage t={t} />;
       case "manufacturing": return <ManufacturingPage t={t} />;
       case "ecommerce": return <EcommercePage t={t} cart={cart} onAddToCart={addToCart} showToast={showToast} />;
